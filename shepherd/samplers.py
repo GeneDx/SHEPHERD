@@ -313,6 +313,7 @@ class PatientNeighborSampler(torch.utils.data.DataLoader):
         self.use_diseases = use_diseases
         self.hparams = hparams
 
+        # TODO need to resolve this issue
         # if we had this file, we would load it here
         # if self.hparams['augment_genes']:
         #     with open(str(project_config.KG_DIR  (
