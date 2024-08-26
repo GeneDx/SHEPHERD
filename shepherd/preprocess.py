@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 #from typing import List, Optional, Tuple, NamedTuple, Union, Callable
-from loguru import logger
 
 # Pytorch
 import torch
@@ -15,16 +14,9 @@ import project_config
 
 def preprocess_graph(args):
 
-    nodes_infile = project_config.KG_DIR / args.node_map
-    logger.info(f"Now loading knowledge graph nodes from {nodes_infile}")
     # Read in nodes & edges
-    nodes = pd.read_csv(nodes_infile, sep="\t")
-    logger.info(f"Done loading knowledge graph nodes from {nodes_infile}")
-
-    edges_infile = project_config.KG_DIR / args.edgelist
-    logger.info(f"Now loading knowledge graph edges from {edges_infile}")
-    edges = pd.read_csv(edges_infile, sep="\t")
-    logger.info(f"Done loading knowledge graph edges from {edges_infile}")
+    nodes = pd.read_csv(project_config.KG_DIR / args.node_map, sep="\t")
+    edges = pd.read_csv(project_config.KG_DIR / args.edgelist, sep="\t")
 
     # Initialize edge index
     edge_index = torch.LongTensor(edges[['x_idx', 'y_idx']].values.T).contiguous() 

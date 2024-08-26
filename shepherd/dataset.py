@@ -1,4 +1,4 @@
-from loguru import logger
+
 
 import random
 import numpy as np
@@ -20,8 +20,8 @@ class PatientDataset(Dataset):
     def __init__(self, filepath, gp_spl=None, raw_data=False, mondo_map_file=str(project_config.PROJECT_DIR / 'mondo_references.csv'), needs_disease_mapping=False, time=False): 
         self.filepath = filepath
         self.patients = read_patients(filepath)
-        logger.info('Dataset filepath: ', filepath)
-        logger.info('Number of patients: ', len(self.patients))
+        print('Dataset filepath: ', filepath)
+        print('Number of patients: ', len(self.patients))
         
         # add placeholder for true genes/diseases if they don't exist
         for patient in self.patients:
@@ -88,7 +88,7 @@ class PatientDataset(Dataset):
         # map from patient id to index in dataset
         self.patient_id_to_index = {p['id']:i for i, p in enumerate(self.patients)}
 
-        logger.info('Finished initalizing dataset')
+        print('Finished initalizing dataset')
 
 
     def __len__(self):
@@ -142,7 +142,7 @@ class PatientDataset(Dataset):
         #NOTE: assumes that patient has a single causal/correct gene (the model still outputs a score for each candidate gene)
         if not self.raw_data:
             if len(correct_genes_node_idx) > 1:
-                # logger.info('NOTE: The patient has multiple correct genes, but we\'re only selecting the first.')
+                #print('NOTE: The patient has multiple correct genes, but we\'re only selecting the first.')
                 correct_genes_node_idx = correct_genes_node_idx[0].unsqueeze(-1)
 
         # get index of correct gene
@@ -156,7 +156,7 @@ class PatientDataset(Dataset):
 
         if self.time:
             t1 = time.time()
-            logger.info(f'It takes {t1-t0:0.4f}s to get an item from the dataset')
+            print(f'It takes {t1-t0:0.4f}s to get an item from the dataset')
             
         return (phenotype_node_idx, candidate_gene_node_idx, correct_genes_node_idx, disease_node_idx, label_idx, additional_labels_dict, patient['id'])
 
@@ -176,7 +176,7 @@ class PatientDataset(Dataset):
         elif idx == 0:
             return 'padding'
         else:
-            logger.info("Exception on:", idx)
+            print("Exception on:", idx)
             raise Exception
 
     def get_similar_patients(self, patient_id, similarity_type='gene'):

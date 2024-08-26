@@ -1,5 +1,4 @@
 # General
-from loguru import logger
 import numpy as np
 import pickle
 import random
@@ -92,31 +91,28 @@ def predict(args):
     pl.seed_everything(hparams['seed'])
 
     # Read KG
-    logger.info("Now loading knowledge graph data")
     all_data, edge_attr_dict, nodes = preprocess.preprocess_graph(args)
-    logger.info("Done loading knowledge graph data")
     n_nodes = len(nodes["node_idx"].unique())
     gene_phen_dis_node_idx = torch.LongTensor(nodes.loc[nodes['node_type'].isin(['gene/protein', 'effect/phenotype', 'disease']), 'node_idx'].values)
 
 
     # Get dataset
-    logger.info('Loading SPL...')
+    print('Loading SPL...')
     spl = np.load(project_config.PROJECT_DIR / 'patients' / hparams['spl'])  
     if (project_config.PROJECT_DIR / 'patients' / hparams['spl_index']).exists():
         with open(str(project_config.PROJECT_DIR / 'patients' / hparams['spl_index']), "rb") as input_file:
             spl_indexing_dict = pickle.load(input_file)
     else: spl_indexing_dict = None 
-    logger.info('Loaded SPL information')
+    print('Loaded SPL information')
     
     dataset = PatientDataset(project_config.PROJECT_DIR / 'patients' / hparams['test_data'], time=hparams['time'])
-    logger.info(f'There are {len(dataset)} patients in the test dataset')
+    print(f'There are {len(dataset)} patients in the test dataset')
     hparams.update({'inference_batch_size': len(dataset)})
-    logger.info('batch size: ', hparams['inference_batch_size'])
-
-    # Get gene-protein node idx to SPL idx mapping
+    print('batch size: ', hparams['inference_batch_size'])
+    # Get dataloader
     nid_to_spl_dict = {nid: idx for idx, nid in enumerate(nodes[nodes["node_type"] == "gene/protein"]["node_idx"].tolist())}
 
-    # Get dataloader
+
     dataloader = PatientNeighborSampler('predict', all_data.edge_index, all_data.edge_index[:,all_data.test_mask], 
                                         sizes = [-1,10,5], patient_dataset=dataset, batch_size = hparams['inference_batch_size'], sparse_sample = 0, 
                                         all_edge_attributes=all_data.edge_attr, n_nodes = n_nodes, relevant_node_idx=gene_phen_dis_node_idx,
@@ -138,11 +134,11 @@ def predict(args):
     t1 = time.time()
     results = trainer.predict(model, dataloaders=dataloader)
     t2 = time.time()
-    logger.info(f"Predicting took {t2 - t1:0.4f} seconds", len(dataset), "patients")
+    print(f"Predicting took {t2 - t1:0.4f} seconds", len(dataset), "patients")
 
     scores_dfs, attn_dfs, gat_attn_df_1, gat_attn_df_2, gat_attn_df_3, phenotype_embeddings, disease_embeddings = zip(*results)
     
-    logger.info('---- RESULTS ----')
+    print('---- RESULTS ----')
     if not os.path.exists(project_config.PROJECT_DIR / 'results'):
         os.mkdir(project_config.PROJECT_DIR / 'results')
     output_base = project_config.PROJECT_DIR / 'results' /  (str(args.best_ckpt).replace('/', '.').split('.ckpt')[0])     
@@ -150,23 +146,23 @@ def predict(args):
     # Save scores
     scores_df = pd.concat(scores_dfs).reset_index(drop=True)
     scores_df.to_csv(str(output_base) + '_scores.csv', index=False)
-    logger.info(scores_df)
+    print(scores_df)
 
     # Save patient phenotype attention
     attn_df = pd.concat(attn_dfs).reset_index(drop=True)
     attn_df.to_csv(str(output_base) + '_phenotype_attn.csv', index=False)
-    logger.info(attn_df)
+    print(attn_df)
 
     # Save patient phenotype embeddings
     if type(phenotype_embeddings) == tuple: phenotype_embeddings = phenotype_embeddings[0]
     torch.save(phenotype_embeddings, str(output_base) + '_phenotype_embeddings.pth')
-    logger.info("Phenotype embeddings", phenotype_embeddings)
+    print("Phenotype embeddings", phenotype_embeddings)
 
     # Save disease embeddings
     if args.run_type == "disease_characterization":
         if type(disease_embeddings) == tuple: disease_embeddings = disease_embeddings[0]
         torch.save(disease_embeddings, str(output_base) + '_disease_embeddings.pth')
-        logger.info("Disease embeddings", disease_embeddings)
+        print("Disease embeddings", disease_embeddings)
 
 
 if __name__ == "__main__":
