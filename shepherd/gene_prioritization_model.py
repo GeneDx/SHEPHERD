@@ -81,8 +81,6 @@ class CombinedGPAligner(pl.LightningModule):
         phenotype_embeddings = torch.index_select(pad_outputs, 0, batch.batch_pheno_nid.view(-1)).view(batch_sz, max_n_phen, -1)
         batch_sz, max_n_cand_genes = batch.batch_cand_gene_nid.shape
         cand_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_cand_gene_nid.view(-1)).view(batch_sz, max_n_cand_genes, -1)
-
-
         if self.hparams.hparams['augment_genes']:
             print("Augmenting genes...", self.hparams.hparams['aug_gene_w'])
             _, max_n_sim_cand_genes, k_sim_genes = batch.batch_sim_gene_nid.shape
