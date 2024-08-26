@@ -1,3 +1,5 @@
+from loguru import logger
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -254,7 +256,7 @@ class PatientNeighborSampler(torch.utils.data.DataLoader):
                  gp_spl = None,
                  spl_indexing_dict=None,
 
-                 gene_similarity_dict=None,
+                 gene_similarity_dict=None, # I can't find this file, train.py suggests it should be in the KG_DIR
                  gene_deg_dict = None,
 
                  hparams=None,
@@ -295,6 +297,8 @@ class PatientNeighborSampler(torch.utils.data.DataLoader):
         self.nid_to_spl_dict = nid_to_spl_dict 
         if hparams["alpha"] < 1: self.gp_spl = gp_spl
         else: self.gp_spl = None
+        logger.info(f'Using SPLs: {self.gp_spl is not None}')
+        logger.info(f'Number of SPLs: {len(gp_spl)}')
         self.spl_indexing_dict = spl_indexing_dict
 
         # Up-sample candidate genes
@@ -309,7 +313,18 @@ class PatientNeighborSampler(torch.utils.data.DataLoader):
         self.use_diseases = use_diseases
         self.hparams = hparams
 
+        # TODO need to resolve this issue
+        # if we had this file, we would load it here
+        # if self.hparams['augment_genes']:
+        #     with open(str(project_config.KG_DIR  (
+        #             'top_10_similar_genes_sim=%s.pkl' % args.aug_sim)), "rb") as input_file:
+        #         gene_similarity_dict = pickle.load(input_file)
+        #     print("Using augment gene similarity: %s" % args.aug_sim)
+        # else:
+        #     gene_similarity_dict = None
+
         self.gene_similarity_dict = gene_similarity_dict
+
         self.gene_deg_dict = gene_deg_dict
 
         # Obtain a *transposed* `SparseTensor` instance.
@@ -435,7 +450,7 @@ class PatientNeighborSampler(torch.utils.data.DataLoader):
             if patient_labels is None: data['patient_labels'] = None
             else: data['patient_labels'] = torch.stack(patient_labels)
 
-        # Get candidate genes to phenotypes SPL
+        # Get candidate genes to phenotypes SPL shortest path lengths
         if not self.gp_spl is None:
             if not self.spl_indexing_dict is None:
                 patient_ids = np.vectorize(self.spl_indexing_dict.get)(patient_ids).astype(int)
