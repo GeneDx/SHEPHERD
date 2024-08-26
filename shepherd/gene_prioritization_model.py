@@ -288,7 +288,6 @@ class CombinedGPAligner(pl.LightningModule):
 
 
     def inference(self, batch, batch_idx):
-        logger.info(f"hparams: {self.hparams}")
         logger.info(f"hparams.hparams: {self.hparams.hparams}")
 
         outputs, gat_attn = self.node_model.predict(self.all_data)
