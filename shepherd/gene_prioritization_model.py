@@ -1,5 +1,3 @@
-from loguru import logger
-
 #pytorch lightning
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -85,7 +83,7 @@ class CombinedGPAligner(pl.LightningModule):
         cand_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_cand_gene_nid.view(-1)).view(batch_sz, max_n_cand_genes, -1)
 
 
-        if self.hparams.hparams['augment_genes']:            
+        if self.hparams.hparams['augment_genes']:
             print("Augmenting genes...", self.hparams.hparams['aug_gene_w'])
             _, max_n_sim_cand_genes, k_sim_genes = batch.batch_sim_gene_nid.shape
             sim_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_sim_gene_nid.view(-1)).view(batch_sz, max_n_sim_cand_genes, self.hparams.hparams['n_sim_genes'], -1)
@@ -303,8 +301,6 @@ class CombinedGPAligner(pl.LightningModule):
         batch_sz, max_n_cand_genes = batch.batch_cand_gene_nid.shape
         cand_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_cand_gene_nid.view(-1)).view(batch_sz, max_n_cand_genes, -1)
 
-        logger.info(f"hparams: {self.hparams}")
-        logger.info(f"hparams.hparams: {self.hparams.hparams}")
         if self.hparams.hparams['augment_genes']:            
             print("Augmenting genes at inference...", self.hparams.hparams['aug_gene_w'])
             _, max_n_sim_cand_genes, k_sim_genes = batch.batch_sim_gene_nid.shape
