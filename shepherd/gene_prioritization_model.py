@@ -1,3 +1,5 @@
+from loguru import logger
+
 #pytorch lightning
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -286,6 +288,9 @@ class CombinedGPAligner(pl.LightningModule):
 
 
     def inference(self, batch, batch_idx):
+        logger.info(f"hparams: {self.hparams}")
+        logger.info(f"hparams.hparams: {self.hparams.hparams}")
+
         outputs, gat_attn = self.node_model.predict(self.all_data)
         pad_outputs = torch.cat([torch.zeros(1, outputs.size(1), device=outputs.device), outputs])
         t1 = time.time()
