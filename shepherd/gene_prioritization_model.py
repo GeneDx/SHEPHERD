@@ -34,11 +34,11 @@ class CombinedGPAligner(pl.LightningModule):
 
     def __init__(self, edge_attr_dict, all_data, n_nodes=None, node_ckpt=None, hparams=None, node_hparams=None,  spl_pca=[], spl_gate=[]):
         super().__init__()
-        print('Initializing Model')
+        logger.info('Initializing Model')
 
         self.save_hyperparameters('hparams', ignore=["spl_pca", "spl_gate"]) # spl_pca and spl_gate never get used
 
-        #print('Saved combined model hyperparameters: ', self.hparams)
+        #logger.info('Saved combined model hyperparameters: ', self.hparams)
 
         self.all_data = all_data
 
@@ -48,7 +48,7 @@ class CombinedGPAligner(pl.LightningModule):
         self.train_target_batch = {}
         self.train_corr_gene_nid = {}
 
-        print(f"Loading Node Embedder from {node_ckpt}")
+        logger.info(f"Loading Node Embedder from {node_ckpt}")
 
         # NOTE: loads in saved hyperparameters
         self.node_model = NodeEmbeder.load_from_checkpoint(checkpoint_path=node_ckpt, 
@@ -57,7 +57,7 @@ class CombinedGPAligner(pl.LightningModule):
                                                            num_nodes=n_nodes)
         
         self.patient_model = self.get_patient_model()
-        print('End Patient Model Initialization')
+        logger.info('End Patient Model Initialization')
         
 
     def get_patient_model(self):
@@ -69,7 +69,7 @@ class CombinedGPAligner(pl.LightningModule):
     def forward(self, batch, step_type):
         # Node Embedder
         t0 = time.time()
-        print(len(batch.adjs))
+        logger.info(len(batch.adjs))
         outputs, gat_attn = self.node_model.forward(batch.n_id, batch.adjs)
         pad_outputs = torch.cat([torch.zeros(1, outputs.size(1), device=outputs.device), outputs])
         t1 = time.time()
@@ -85,12 +85,12 @@ class CombinedGPAligner(pl.LightningModule):
         cand_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_cand_gene_nid.view(-1)).view(batch_sz, max_n_cand_genes, -1)
 
         if self.hparams.hparams['augment_genes']:            
-            print("Augmenting genes...", self.hparams.hparams['aug_gene_w'])
+            logger.info("Augmenting genes...", self.hparams.hparams['aug_gene_w'])
             _, max_n_sim_cand_genes, k_sim_genes = batch.batch_sim_gene_nid.shape
             sim_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_sim_gene_nid.view(-1)).view(batch_sz, max_n_sim_cand_genes, self.hparams.hparams['n_sim_genes'], -1)
             agg_sim_gene_embedding = weighted_sum(sim_gene_embeddings, batch.batch_sim_gene_sims)
             if self.hparams.hparams['aug_gene_by_deg']:
-                print("Augmenting gene by degree...")
+                logger.info("Augmenting gene by degree...")
                 aug_gene_w = self.hparams.hparams['aug_gene_w'] * torch.exp(-self.hparams.hparams['aug_gene_w'] * batch.batch_cand_gene_degs) + (1 - self.hparams.hparams['aug_gene_w'] - 0.1)
                 aug_gene_w = (aug_gene_w * (torch.sum(batch.batch_sim_gene_sims, dim = -1) > 0)).unsqueeze(-1)
             else:
@@ -111,7 +111,7 @@ class CombinedGPAligner(pl.LightningModule):
             t3 = time.time()
 
         if self.hparams.hparams['time']:
-            print(f'It takes {t1-t0:0.4f}s for the node model, {t2-t1:0.4f}s for indexing into the output, and {t3-t2:0.4f}s for the patient model forward.')
+            logger.info(f'It takes {t1-t0:0.4f}s for the node model, {t2-t1:0.4f}s for indexing into the output, and {t3-t2:0.4f}s for the patient model forward.')
         
         return outputs, gat_attn, phenotype_embedding, candidate_gene_embeddings, disease_embeddings, gene_mask, phenotype_mask, disease_mask, attn_weights
 
@@ -170,7 +170,7 @@ class CombinedGPAligner(pl.LightningModule):
 
         ## calc time
         if self.hparams.hparams['time']:
-            print(f'It takes {t1-t0:0.4f}s to get edges, {t2-t1:0.4f}s for the forward pass,  {t3-t2:0.4f}s to rank genes, {t4-t3:0.4f}s to calc patient loss, and {t5-t4:0.4f}s to calc the node loss.')
+            logger.info(f'It takes {t1-t0:0.4f}s to get edges, {t2-t1:0.4f}s for the forward pass,  {t3-t2:0.4f}s to rank genes, {t4-t3:0.4f}s to calc patient loss, and {t5-t4:0.4f}s to calc the node loss.')
 
         ## Plot gradients
         if self.hparams.hparams['plot_gradients']:
@@ -180,7 +180,7 @@ class CombinedGPAligner(pl.LightningModule):
         return node_embedder_loss, loss, correct_gene_ranks, roc_score, ap_score, acc, f1, node_embeddings, gat_attn, phenotype_embedding, candidate_gene_embeddings, attn_weights, phen_gene_sims, raw_phen_gene_sims, gene_mask, phenotype_mask
 
     def training_step(self, batch, batch_idx):
-        print('training step')
+        logger.info('training step')
         node_embedder_loss, patient_loss, correct_gene_ranks, roc_score, ap_score, acc, f1, node_embeddings, gat_attn, phenotype_embedding, candidate_gene_embeddings, attn_weights, phen_gene_sims, raw_phen_gene_sims, gene_mask, phenotype_mask = self._step(batch, 'train')
 
         loss = (self.hparams.hparams['lambda'] * node_embedder_loss) + ((1 - self.hparams.hparams['lambda']) *  patient_loss)
@@ -263,7 +263,7 @@ class CombinedGPAligner(pl.LightningModule):
                 all_phens.extend(p_names)
                 all_attn_weights.extend(attn_w[p_mask].tolist())
             phen_df = pd.DataFrame({'patient_id': all_patient_ids, 'phenotypes': all_phens, 'degrees': all_degrees, 'attention':all_attn_weights})
-            print(phen_df.head())
+            logger.info(phen_df.head())
 
         return results_df, phen_df, attn_dfs, phenotype_embeddings.cpu(), None
   
@@ -306,7 +306,7 @@ class CombinedGPAligner(pl.LightningModule):
         cand_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_cand_gene_nid.view(-1)).view(batch_sz, max_n_cand_genes, -1)
 
         if self.hparams.hparams['augment_genes']:            
-            print("Augmenting genes at inference...", self.hparams.hparams['aug_gene_w'])
+            logger.info("Augmenting genes at inference...", self.hparams.hparams['aug_gene_w'])
             _, max_n_sim_cand_genes, k_sim_genes = batch.batch_sim_gene_nid.shape
             sim_gene_embeddings = torch.index_select(pad_outputs, 0, batch.batch_sim_gene_nid.view(-1)).view(batch_sz, max_n_sim_cand_genes, self.hparams.hparams['n_sim_genes'], -1)
             agg_sim_gene_embedding = weighted_sum(sim_gene_embeddings, batch.batch_sim_gene_sims)        
@@ -327,7 +327,7 @@ class CombinedGPAligner(pl.LightningModule):
             t3 = time.time()
 
         if self.hparams.hparams['time']:
-            print(f'It takes {t1-t0:0.4f}s for the node model, {t2-t1:0.4f}s for indexing into the output, and {t3-t2:0.4f}s for the patient model forward.')
+            logger.info(f'It takes {t1-t0:0.4f}s for the node model, {t2-t1:0.4f}s for indexing into the output, and {t3-t2:0.4f}s for the patient model forward.')
         
         return outputs, gat_attn, phenotype_embedding, candidate_gene_embeddings, disease_embeddings, gene_mask, phenotype_mask, disease_mask, attn_weights
 
@@ -372,13 +372,13 @@ class CombinedGPAligner(pl.LightningModule):
             
             results_df, phen_df, attn_dfs, phenotype_embeddings, disease_embeddings = self.write_results_to_file(batch_info, phen_gene_sims, gene_mask, phenotype_mask, attn_weights, correct_gene_ranks, gat_attn, node_embeddings, phenotype_embedding, loop_type=loop_type)
             
-            print("Writing results for test...")
+            logger.info("Writing results for test...")
             output_base = "/home/ml499/public_repos/SHEPHERD/shepherd/results/gp"
             results_df.to_csv(str(output_base) + '_scores.csv', index=False)
-            print(results_df)
+            logger.info(results_df)
 
             phen_df.to_csv(str(output_base) + '_phenotype_attention.csv', sep = ',', index=False)
-            print(phen_df)
+            logger.info(phen_df)
 
 
         # Plot embeddings
