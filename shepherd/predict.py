@@ -137,6 +137,10 @@ def predict(args):
     
     # Create Weights & Biases Logger
     run_name = 'test'
+    # TODO: remove the hparams value for augment_genes
+    logger.info(f"hparams: {hparams}")
+    hparams.update({'augment_genes': False})
+    logger.info(f"hparams: {hparams}")
     wandb_logger = WandbLogger(name=run_name, project='rare_disease_dx_combined', entity='rare_disease_dx', save_dir=hparams['wandb_save_dir'],
                     id="_".join(run_name.split(":")), resume="allow") 
 

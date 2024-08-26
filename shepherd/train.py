@@ -1,4 +1,5 @@
 # General
+from loguru import logger
 import numpy as np
 import random
 import argparse
@@ -195,7 +196,7 @@ def get_dataloaders(hparams, all_data, nid_to_spl_dict, n_nodes, gene_phen_dis_n
 
 
 def get_model(args, hparams, node_hparams, all_data, edge_attr_dict, n_nodes, load_from_checkpoint=False):
-    print("setting up model", hparams['model_type'])
+    logger.info(f"setting up model: {hparams['model_type']}")
     # get patient model 
     if hparams['model_type'] == 'aligner':
         if load_from_checkpoint: 
@@ -211,7 +212,7 @@ def get_model(args, hparams, node_hparams, all_data, edge_attr_dict, n_nodes, lo
             comb_patient_model = CombinedPatientNCA(edge_attr_dict=edge_attr_dict, all_data=all_data, n_nodes=n_nodes, node_ckpt=hparams["saved_checkpoint_path"], hparams=hparams)
     else:
         raise NotImplementedError
-    print('finished setting up model')
+    logger.info('finished setting up model')
     return comb_patient_model
 
 
