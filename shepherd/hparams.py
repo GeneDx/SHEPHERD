@@ -234,6 +234,6 @@ def get_predict_hparams(args):
     hparams.update({'add_similar_patients' : False})
     hparams = get_patient_data_args(args, hparams)
 
-    print('Predict hparams: ', hparams)
+    logger.info('Predict hparams: ', hparams)
 
     return hparams
